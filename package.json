@@ -1,0 +1,37 @@
+{
+  "name": "n8n-nodes-apper",
+  "version": "0.1.0",
+  "description": "Apper is an AI app builder that turns your prompts into fully functional apps in minutes—with built-in billing, auth, and database. That means you can charge customers and manage users from day one, no code needed.",
+  "license": "MIT",
+  "homepage": "https://apper.io",
+  "keywords": ["n8n-community-node-package"],
+  "author": { "name": "John Doe", "email": "test@test.com" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Janhavi275/n8n-nodes-apper.git"
+  },
+  "scripts": {
+    "build": "n8n-node build",
+    "build:watch": "tsc --watch",
+    "dev": "n8n-node dev",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "release": "n8n-node release",
+    "prepublishOnly": "n8n-node prerelease"
+  },
+  "files": ["dist"],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "strict": true,
+    "credentials": ["dist/credentials/ApperApi.credentials.js"],
+    "nodes": ["dist/nodes/Apper/Apper.node.js"]
+  },
+  "devDependencies": {
+    "@n8n/node-cli": "*",
+    "eslint": "9.32.0",
+    "prettier": "3.6.2",
+    "release-it": "^19.0.4",
+    "typescript": "5.9.2"
+  },
+  "peerDependencies": { "n8n-workflow": "*" }
+}
