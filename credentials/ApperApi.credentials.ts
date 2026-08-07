@@ -28,7 +28,7 @@ export class ApperApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				'x-api-key': '={{$credentials.apiKey}}',
+				'Authorization': '={{$credentials.apiKey}}',
 			},
 		},
 	};
@@ -36,7 +36,7 @@ export class ApperApi implements ICredentialType {
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: 'https://api.apper.io/v1',
-			url: '/v1/user',
+			url: '/auth/me',
 		},
 	};
 }
