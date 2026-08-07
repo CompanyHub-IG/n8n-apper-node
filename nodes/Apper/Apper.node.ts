@@ -1,6 +1,8 @@
 import { NodeConnectionTypes, type INodeType, type INodeTypeDescription } from 'n8n-workflow';
 import { userDescription } from './resources/user';
 import { companyDescription } from './resources/company';
+import { appDescription } from './resources/app';
+import { tableDescription } from './resources/table';
 
 export class Apper implements INodeType {
 	description: INodeTypeDescription = {
@@ -40,11 +42,21 @@ export class Apper implements INodeType {
 						name: 'Company',
 						value: 'company',
 					},
+					{
+						name: 'App',
+						value: 'app',
+					},
+					{
+						name: 'Table',
+						value: 'table',
+					},
 				],
 				default: 'user',
 			},
 			...userDescription,
 			...companyDescription,
+			...appDescription,
+			...tableDescription,
 		],
 	};
 }
