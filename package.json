@@ -24,7 +24,7 @@
     "n8nNodesApiVersion": 1,
     "strict": true,
     "credentials": ["dist/credentials/ApperApi.credentials.js"],
-    "nodes": ["dist/nodes/Apper/Apper.node.js"]
+    "nodes": ["dist/nodes/Apper/Apper.node.js", "dist/nodes/ApperTrigger/ApperTrigger.node.js"]
   },
   "devDependencies": {
     "@n8n/node-cli": "*",

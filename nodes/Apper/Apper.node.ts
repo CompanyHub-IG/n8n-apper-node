@@ -1,8 +1,8 @@
 import { NodeConnectionTypes, type INodeType, type INodeTypeDescription } from 'n8n-workflow';
-import { userDescription } from './resources/user';
-import { companyDescription } from './resources/company';
-import { appDescription } from './resources/app';
-import { tableDescription } from './resources/table';
+import { recordDescription } from './resources/record';
+import { getApps, getTables } from './methods/listSearch';
+import { getTableFields } from './methods/resourceMapping';
+import { getSearchableFields } from './methods/loadOptions';
 
 export class Apper implements INodeType {
 	description: INodeTypeDescription = {
@@ -35,28 +35,26 @@ export class Apper implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'User',
-						value: 'user',
-					},
-					{
-						name: 'Company',
-						value: 'company',
-					},
-					{
-						name: 'App',
-						value: 'app',
-					},
-					{
-						name: 'Table',
-						value: 'table',
+						name: 'Record',
+						value: 'record',
 					},
 				],
-				default: 'user',
+				default: 'record',
 			},
-			...userDescription,
-			...companyDescription,
-			...appDescription,
-			...tableDescription,
+			...recordDescription,
 		],
+	};
+
+	methods = {
+		listSearch: {
+			getApps,
+			getTables,
+		},
+		resourceMapping: {
+			getTableFields,
+		},
+		loadOptions: {
+			getSearchableFields,
+		},
 	};
 }
