@@ -11,7 +11,7 @@ export class ApperApi implements ICredentialType {
 	displayName = 'Apper API';
 
 	// Link to your community node's README
-	documentationUrl = 'https://github.com/Janhavi275/n8n-nodes-apper?tab=readme-ov-file#credentials';
+	documentationUrl = 'https://github.com/CompanyHub-IG/n8n-apper-node?tab=readme-ov-file#credentials';
 
 	properties: INodeProperties[] = [
 		{
