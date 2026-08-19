@@ -1,14 +1,27 @@
 {
-  "name": "n8n-nodes-apper",
-  "version": "0.1.0",
-  "description": "Apper is an AI app builder that turns your prompts into fully functional apps in minutes—with built-in billing, auth, and database. That means you can charge customers and manage users from day one, no code needed.",
-  "license": "MIT",
+  "name": "@CompanyHub-IG/n8n-nodes-apper",
+  "version": "0.0.1",
+  "description": "Apper is an AI app builder that turns your prompts into fully functional apps in minutes—with built-in billing, auth, and database.",
+  "main": "dist/index.js",
   "homepage": "https://apper.io",
-  "keywords": ["n8n-community-node-package"],
-  "author": { "name": "John Doe", "email": "test@test.com" },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Janhavi275/n8n-nodes-apper.git"
+    "url": "git+https://github.com/CompanyHub-IG/n8n-apper-node.git"
+  },
+  "keywords": [
+    "n8n-community-node-package",
+    "apper",
+    "automation"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
   },
   "scripts": {
     "build": "n8n-node build",
@@ -19,12 +32,16 @@
     "release": "n8n-node release",
     "prepublishOnly": "n8n-node prerelease"
   },
-  "files": ["dist"],
   "n8n": {
     "n8nNodesApiVersion": 1,
     "strict": true,
-    "credentials": ["dist/credentials/ApperApi.credentials.js"],
-    "nodes": ["dist/nodes/Apper/Apper.node.js", "dist/nodes/ApperTrigger/ApperTrigger.node.js"]
+    "credentials": [
+      "dist/credentials/ApperApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Apper/Apper.node.js",
+      "dist/nodes/ApperTrigger/ApperTrigger.node.js"
+    ]
   },
   "devDependencies": {
     "@n8n/node-cli": "*",
@@ -33,5 +50,7 @@
     "release-it": "^19.0.4",
     "typescript": "5.9.2"
   },
-  "peerDependencies": { "n8n-workflow": "*" }
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
 }
