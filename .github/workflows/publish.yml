@@ -59,6 +59,6 @@ jobs:
         run: npm run lint
 
       - name: Publish
-        run: npm publish --access public
+        run: npm publish --ignore-scripts --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
