@@ -64,7 +64,7 @@ export class ApperTrigger implements INodeType {
 		subtitle: '={{$parameter["event"]}}',
 		description: 'Starts a workflow when a record is created or updated in Apper',
 		defaults: { name: 'Apper Trigger' },
-		usableAsTool: true,
+		// usableAsTool: true,
 		polling: true,
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],

@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-apper",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "release-it": {
     "git": {
       "requireBranch": "master"
@@ -56,6 +56,7 @@
   "devDependencies": {
     "@n8n/node-cli": "*",
     "eslint": "9.32.0",
+    "n8n-node": "^1.0.0",
     "prettier": "3.6.2",
     "release-it": "^19.0.4",
     "typescript": "5.9.2"
