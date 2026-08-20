@@ -1,5 +1,5 @@
 {
-  "name": "@CompanyHub-IG/n8n-nodes-apper",
+  "name": "n8n-nodes-apper",
   "version": "0.0.3",
   "release-it": {
     "git": {
@@ -17,7 +17,8 @@
     "dist"
   ],
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "repository": {
     "type": "git",
