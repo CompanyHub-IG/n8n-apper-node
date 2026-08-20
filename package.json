@@ -1,6 +1,6 @@
 {
   "name": "@CompanyHub-IG/n8n-nodes-apper",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "release-it": {
     "git": {
       "requireBranch": "master"
