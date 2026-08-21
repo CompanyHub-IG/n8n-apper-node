@@ -23,7 +23,7 @@ async function getApps(
 ): Promise<INodeListSearchResult> {
 	const response = await this.helpers.httpRequestWithAuthentication.call(this, 'apperApi', {
 		method: 'GET',
-		url: 'https://api.apper.io/v1/meta/apps',
+		url: 'https://api.apper.io/v1/meta/apps?limit=200',
 		json: true,
 	});
 	const apps = (response.data ?? []) as Array<{ appId: string; label: string }>;
