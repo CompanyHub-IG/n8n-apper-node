@@ -154,7 +154,7 @@ export class ApperTrigger implements INodeType {
 		// Apper's "omit fields for all fields" behavior doesn't actually return
 		// all fields in practice - only Id comes back unless you explicitly
 		// list every column. So fetch the table's real schema first and pass
-		// every field name in, guaranteeing full records instead of just Id.
+		// every field name in, guaranteeing full records instead of just Id
 		const fieldsResponse = await this.helpers.httpRequestWithAuthentication.call(
 			this,
 			'apperApi',
