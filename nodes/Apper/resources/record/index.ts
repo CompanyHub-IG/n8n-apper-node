@@ -9,6 +9,7 @@ import {
 	buildGetRecordBody,
 	buildSearchRecordBody,
 	checkRecordOperationResult,
+	checkCreateRecordsResult,
 	checkGetRecordResult,
 	checkSearchRecordResult,
 } from './preSend';
@@ -21,7 +22,7 @@ const showOnlyForRecordCreate = {
 	resource: ['record'],
 	operation: ['create'],
 };
-
+    
 const showOnlyForRecordUpdate = {
 	resource: ['record'],
 	operation: ['update'],
@@ -76,14 +77,7 @@ export const recordDescription: INodeProperties[] = [
 						url: '=/data/{{$parameter["appId"]}}/tables/{{$parameter["tableName"]}}/records',
 					},
 					output: {
-						postReceive: [
-							{
-								type: 'rootProperty',
-								properties: {
-									property: 'results',
-								},
-							},
-						],
+						postReceive: [checkCreateRecordsResult],
 					},
 				},
 			},
@@ -160,7 +154,7 @@ export const recordDescription: INodeProperties[] = [
 				},
 			},
 			{
-				name: 'Create Many',
+				name: 'Create Multiple Records',
 				value: 'createMany',
 				action: 'Create multiple records',
 				description: 'Create multiple records in a table in one call',
@@ -173,19 +167,12 @@ export const recordDescription: INodeProperties[] = [
 						url: '=/data/{{$parameter["appId"]}}/tables/{{$parameter["tableName"]}}/records',
 					},
 					output: {
-						postReceive: [
-							{
-								type: 'rootProperty',
-								properties: {
-									property: 'results',
-								},
-							},
-						],
+						postReceive: [checkCreateRecordsResult],
 					},
 				},
 			},
 			{
-				name: 'Update Many',
+				name: 'Update Multiple Records',
 				value: 'updateMany',
 				action: 'Update multiple records',
 				description: 'Update multiple records in a table in one call',
@@ -198,19 +185,12 @@ export const recordDescription: INodeProperties[] = [
 						url: '=/data/{{$parameter["appId"]}}/tables/{{$parameter["tableName"]}}/records',
 					},
 					output: {
-						postReceive: [
-							{
-								type: 'rootProperty',
-								properties: {
-									property: 'results',
-								},
-							},
-						],
+						postReceive: [checkCreateRecordsResult],
 					},
 				},
 			},
 			{
-				name: 'Delete Many',
+				name: 'Delete Multiple Records',
 				value: 'deleteMany',
 				action: 'Delete multiple records',
 				description: 'Delete multiple records from a table in one call',
@@ -223,14 +203,7 @@ export const recordDescription: INodeProperties[] = [
 						url: '=/data/{{$parameter["appId"]}}/tables/{{$parameter["tableName"]}}/records/delete',
 					},
 					output: {
-						postReceive: [
-							{
-								type: 'rootProperty',
-								properties: {
-									property: 'results',
-								},
-							},
-						],
+						postReceive: [checkCreateRecordsResult],
 					},
 				},
 			},
@@ -293,16 +266,36 @@ export const recordDescription: INodeProperties[] = [
 			},
 		],
 	},
-	{
-		displayName: 'Record ID',
+		{
+		displayName: 'Record',
 		name: 'recordId',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
 		required: true,
 		displayOptions: {
 			show: showOnlyForRecordId,
 		},
-		description: 'The ID of the record',
+		description: 'The record to get, update, or delete',
+		typeOptions: {
+			loadOptionsDependsOn: ['tableName.value'],
+		},
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: {
+					searchListMethod: 'getRecords',
+					searchable: true,
+				},
+			},
+			{
+				displayName: 'ID',
+				name: 'id',
+				type: 'string',
+				placeholder: 'e.g. 7088e546-6b22-4e28-a5ce-d5b898ea7a82',
+			},
+		],
 	},
 	{
 		displayName: 'Search Field Name or ID',
@@ -379,7 +372,7 @@ export const recordDescription: INodeProperties[] = [
 					singular: 'field',
 					plural: 'fields',
 				},
-				addAllFields: true,
+				addAllFields: false,
 			},
 		},
 	},
@@ -473,7 +466,7 @@ export const recordDescription: INodeProperties[] = [
 									singular: 'field',
 									plural: 'fields',
 								},
-								addAllFields: true,
+								addAllFields: false,
 							},
 						},
 					},
@@ -490,6 +483,6 @@ export const recordDescription: INodeProperties[] = [
 		displayOptions: {
 			show: showOnlyForRecordDeleteMany,
 		},
-		description: 'Comma-separated list of record IDs to delete, e.g. 1, 2, 5, 8',
+		description: 'Comma-separated list of record IDs to delete, e.g. 2aadd83d-d0d0-4e4a-af93-21685c1fbbae, 17c6bc1f-877c-4f2a-8027-62706ae8710a',
 	},
 ];

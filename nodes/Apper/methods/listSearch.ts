@@ -1,4 +1,4 @@
-import type { ILoadOptionsFunctions, INodeListSearchResult } from 'n8n-workflow';
+import type { IDataObject, ILoadOptionsFunctions, INodeListSearchResult } from 'n8n-workflow';
 
 function extractValue(param: unknown): string {
 	if (typeof param === 'string') return param;
@@ -58,4 +58,46 @@ export async function getTables(
 		}));
 
 	return { results };
+}
+
+
+// Powers the "Record ID" resourceLocator dropdown on Get/Update/Delete —
+// searches by "Name" (per Apper's convention seen in the sample record
+// data) so the picker shows a human-readable label instead of a raw Id.
+export async function getRecords(
+	this: ILoadOptionsFunctions,
+	filter?: string,
+): Promise<INodeListSearchResult> {
+	const appId = extractValue(this.getNodeParameter('appId', 0));
+	const tableName = extractValue(this.getNodeParameter('tableName', 0));
+
+	if (!appId || !tableName) {
+		return { results: [] };
+	}
+
+	const body: IDataObject = {
+		fields: ['Id', 'Name'],
+		OrderBy: [{ FieldName: 'Id', SortType: 'Desc' }],
+		PagingInfo: { Limit: 50 },
+	};
+
+	if (filter) {
+		body.where = [{ fieldName: 'Name', operator: 'Contains', values: [filter] }];
+	}
+
+	const response = await this.helpers.httpRequestWithAuthentication.call(this, 'apperApi', {
+		method: 'POST',
+		url: `https://api.apper.io/v1/data/${appId}/tables/${tableName}`,
+		body,
+		json: true,
+	});
+
+	const records = (response.data ?? []) as Array<{ Id: string; Name?: string }>;
+
+	return {
+		results: records.map((record) => ({
+			name: record.Name || record.Id,
+			value: record.Id,
+		})),
+	};
 }
