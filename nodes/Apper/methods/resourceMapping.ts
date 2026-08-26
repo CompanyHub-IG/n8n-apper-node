@@ -1,41 +1,46 @@
-import type { FieldType, ILoadOptionsFunctions, ResourceMapperFields } from 'n8n-workflow';
+import type { FieldType, ILoadOptionsFunctions, ResourceMapperField, ResourceMapperFields } from 'n8n-workflow';
+
+// Mirrors Apper's field type list (same convention used in the Zapier
+// integration), mapped onto n8n's supported FieldType values. n8n only
+// understands 'string' | 'number' | 'dateTime' | 'boolean' | 'options' (plus
+// a few others not relevant here), so several distinct Apper types collapse
+// onto the same n8n type - e.g. Text/Email/Tag/Lookup/People/Uuid all become
+// plain string inputs. "People" is still a plain string input on the UI
+// side (the user types/pastes a user ID) - it's transformed into Apper's
+// [{ "Id": <value> }] array shape later, in preSend.ts's castFields, using
+// the apperType carried alongside each field below.
+const apperToN8nFieldType: Record<string, FieldType> = {
+	Text: 'string',
+	MultilineText: 'string',
+	Number: 'number',
+	Integer: 'number',
+	Decimal: 'number',
+	Date: 'dateTime',
+	DateTime: 'dateTime',
+	Boolean: 'boolean',
+	Bool: 'boolean',
+	Email: 'string',
+	// Picklist/Select/Dropdown get real dropdown behavior via the `options`
+	// array built below from the field's `choices`/`options` metadata.
+	Picklist: 'options',
+	Select: 'options',
+	Dropdown: 'options',
+	// Apper expects a comma-separated string for these, not a JSON array -
+	// keep them as plain string inputs.
+	MultiSelect: 'string',
+	MultiPicklist: 'string',
+	Tag: 'string',
+	// Lookup/MasterDetail: Apper's docs list these as string references
+	// (not integers).
+	Lookup: 'string',
+	MasterDetail: 'string',
+	// People: string input on the UI, converted to [{ Id: value }] on send.
+	People: 'string',
+	Uuid: 'string',
+};
 
 function mapApperTypeToFieldType(apperType: string): FieldType {
-	switch (apperType) {
-		case 'Number':
-		case 'Integer':
-		case 'Decimal':
-			return 'number';
-
-		case 'Boolean':
-		case 'Bool':
-			return 'boolean';
-
-		case 'Date':
-		case 'DateTime':
-			return 'dateTime';
-
-		case 'Picklist':
-		case 'Select':
-		case 'Dropdown':
-			return 'options';
-
-		// Apper's docs specify these as "Record ID (integer)", unlike Zapier's
-		// looser string mapping - Apper's own API is strict about JSON types
-		// (confirmed by the Decimal/price_c case), so treat these as numbers too.
-		case 'Lookup':
-		case 'MasterDetail':
-			return 'number';
-
-		// Text, MultilineText, Email, Tag come through as plain text inputs.
-		// MultiSelect/MultiPicklist also stay as string - Apper expects a
-		// comma-separated string for these (per docs), not a JSON array.
-		// People also stays as string - Apper expects [{"User": <id>}] for
-		// this type, which doesn't fit a simple input; use the field's
-		// "Expression" toggle to enter that raw JSON manually when needed.
-		default:
-			return 'string';
-	}
+	return apperToN8nFieldType[apperType] ?? 'string';
 }
 
 function extractValue(param: unknown): string {
@@ -45,6 +50,14 @@ function extractValue(param: unknown): string {
 	}
 	return '';
 }
+
+// n8n's ResourceMapperField type doesn't have a slot for "the original API
+// type this came from" - we need that in preSend.ts to know a "string"
+// field is actually Apper's People type and needs array-wrapping. n8n
+// serializes whatever we return here into the node's stored parameter
+// value as-is, so this extra property survives and comes back out through
+// getNodeParameter('columns').schema in preSend.ts.
+type ApperResourceMapperField = ResourceMapperField & { apperType: string };
 
 export async function getTableFields(this: ILoadOptionsFunctions): Promise<ResourceMapperFields> {
 	const appId = extractValue(this.getNodeParameter('appId', 0));
@@ -68,21 +81,22 @@ export async function getTableFields(this: ILoadOptionsFunctions): Promise<Resou
 		options?: string[] | null;
 	}>;
 
-	return {
-		fields: apperFields
-			.filter((field) => field.name.toLowerCase() !== 'id')
-			.map((field) => ({
-				id: field.name,
-				displayName: field.label,
-				type: mapApperTypeToFieldType(field.type),
-				required: field.isRequired,
-				defaultMatch: false,
-				display: true,
-				options:
-					(field.type === 'Picklist' || field.type === 'Select' || field.type === 'Dropdown') &&
-					field.options
-						? field.options.map((opt) => ({ name: opt, value: opt }))
-						: undefined,
-			})),
-	};
+	const fields: ApperResourceMapperField[] = apperFields
+		.filter((field) => field.name.toLowerCase() !== 'id')
+		.map((field) => ({
+			id: field.name,
+			displayName: field.label,
+			type: mapApperTypeToFieldType(field.type),
+			required: field.isRequired,
+			defaultMatch: false,
+			display: true,
+			apperType: field.type,
+			options:
+				(field.type === 'Picklist' || field.type === 'Select' || field.type === 'Dropdown') &&
+				field.options
+					? field.options.map((opt) => ({ name: opt, value: opt }))
+					: undefined,
+		}));
+
+	return { fields: fields as unknown as ResourceMapperFields['fields'] };
 }

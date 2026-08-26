@@ -10,7 +10,7 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 
 interface ResourceMapperValue {
 	value: Record<string, unknown> | null;
-	schema: Array<{ id: string; type?: string }>;
+	schema: Array<{ id: string; type?: string; apperType?: string }>;
 }
 
 interface ApperFieldMeta {
@@ -43,14 +43,9 @@ async function fetchTableFields(
 	return (response?.data as ApperFieldMeta[] | undefined) ?? [];
 }
 
-// Apper's API is strict about JSON types (numbers must be actual numbers,
-// booleans actual booleans, not stringified versions). n8n's resourceMapper
-// UI captures values based on the field's declared type (set in
-// methods/resourceMapping.ts), but we cast defensively here too in case a
-// value comes through as a string (e.g. entered via expression mode).
 function castFields(
 	rawValues: Record<string, unknown>,
-	schema: Array<{ id: string; type?: string }>,
+	schema: Array<{ id: string; type?: string; apperType?: string }>,
 ): Record<string, unknown> {
 	const casted: Record<string, unknown> = {};
 
@@ -61,13 +56,15 @@ function castFields(
 
 		const fieldDef = schema.find((f) => f.id === key);
 
-		if (fieldDef?.type === 'number') {
+		if (fieldDef?.apperType === 'People') {   
+			casted[key] = [{ "User": String(value) }];
+		} else if (fieldDef?.type === 'number') {
 			casted[key] = Number(value);
 		} else if (fieldDef?.type === 'boolean' && typeof value === 'string') {
 			casted[key] = value.toLowerCase() === 'true';
 		} else {
 			casted[key] = value;
-		}
+		}   
 	}
 
 	return casted;
@@ -87,35 +84,34 @@ export async function castRecordFieldTypes(
 }
 
 // Update: PUT .../records, body { records: [{ Id, ...fields }] }.
-// Apper requires "Id" capitalized, and rejects it as a string — must be an
-// actual integer.
+// Apper requires "Id" capitalized. Apper's records endpoints accept it as
+// a string, not an integer.
 export async function castUpdateRecordFieldTypes(
 	this: IExecuteSingleFunctions,
 	requestOptions: IHttpRequestOptions,
 ): Promise<IHttpRequestOptions> {
-	const recordId = this.getNodeParameter('recordId') as string;
+	const recordId = extractValue(this.getNodeParameter('recordId'));
 	const columns = this.getNodeParameter('columns') as ResourceMapperValue;
 	const rawValues = columns?.value ?? {};
 	const schema = columns?.schema ?? [];
 
 	requestOptions.body = {
-		records: [{ Id: Number(recordId), ...castFields(rawValues, schema) }],
+		records: [{ Id: recordId, ...castFields(rawValues, schema) }],
 	};
 
 	return requestOptions;
 }
-
-// Delete: POST .../records/delete, body { recordIds: [...] }, integers.
+// Delete: POST .../records/delete, body { recordIds: [...] }.
 export async function buildDeleteRecordBody(
 	this: IExecuteSingleFunctions,
 	requestOptions: IHttpRequestOptions,
 ): Promise<IHttpRequestOptions> {
-	const recordId = this.getNodeParameter('recordId') as string;
+	const recordId = extractValue(this.getNodeParameter('recordId'));
 
-	requestOptions.body = { recordIds: [Number(recordId)] };
+	requestOptions.body = { recordIds: [recordId] };
 
 	return requestOptions;
-}
+}       
 
 interface RecordLineItem {
 	columns?: ResourceMapperValue;
@@ -173,7 +169,7 @@ export async function buildUpdateManyBody(
 		}
 		const rawValues = item.columns?.value ?? {};
 		const schema = item.columns?.schema ?? [];
-		return { Id: Number(item.recordId), ...castFields(rawValues, schema) };
+		return { Id: item.recordId, ...castFields(rawValues, schema) };
 	});
 
 	requestOptions.body = { records };
@@ -191,8 +187,7 @@ export async function buildDeleteManyBody(
 	const recordIds = raw
 		.split(',')
 		.map((id) => id.trim())
-		.filter((id) => id.length > 0)
-		.map((id) => Number(id));
+		.filter((id) => id.length > 0);
 
 	if (recordIds.length === 0) {
 		throw new NodeOperationError(this.getNode(), 'At least one record ID is required.');
@@ -323,6 +318,40 @@ export async function checkRecordOperationResult(
 	}
 
 	return [{ json: result }];
+}
+
+// Create / Create Many / Update Many / Delete Many: response has a
+// "results" array with one entry per record, each carrying its own success
+// flag — a batch of 5 can have 4 succeed and 1 fail with a DB-level error
+// like Apper's "lastval is not yet defined in this session". The
+// declarative rootProperty postReceive doesn't inspect success at all, so a
+// failed record would silently come back as normal-looking output. This
+// checks every item and throws if any failed, returning each record's
+// "data" as a separate output item on success.
+export async function checkCreateRecordsResult(
+	this: IExecuteSingleFunctions,
+	data: INodeExecutionData[],
+	response: IN8nHttpFullResponse,
+): Promise<INodeExecutionData[]> {
+	const body = response.body as IDataObject;
+	const results = body?.results as IDataObject[] | undefined;
+
+	if (!results || !Array.isArray(results) || results.length === 0) {
+		throw new NodeApiError(this.getNode(), body as JsonObject, {
+			message: 'Apper API did not return a valid result for the operation.',
+		});
+	}
+
+	const failed = results.filter((r) => r.success === false);
+
+	if (failed.length > 0) {
+		const message = failed
+			.map((r) => (r.message as string) || 'Failed to create the record.')
+			.join('; ');
+		throw new NodeApiError(this.getNode(), body as JsonObject, { message });
+	}
+
+	return results.map((r) => ({ json: (r.data as IDataObject) ?? r }));
 }
 
 // Get Record By ID: response is a single object under "data".
