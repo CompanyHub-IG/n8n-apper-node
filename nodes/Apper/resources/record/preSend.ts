@@ -47,7 +47,7 @@ function castFields(
 	const casted: Record<string, unknown> = {};
 
 	for (const [key, value] of Object.entries(rawValues)) {
-		if (value === '' || value === null || value === undefined) {
+		if ( value === null || value === undefined) {
 			continue;
 		}
 

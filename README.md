@@ -2,7 +2,7 @@
 
 This is an n8n community node. It lets you use [Apper](https://apper.io) in your n8n workflows.
 
-Apper is a no-code database/app platform for building custom business apps with tables, records, and automations. This package provides two nodes: an **Apper Trigger** node that starts workflows on [triggering event — e.g. new/updated records], and an **Apper** node that lets you create, read, update, delete, and search records in your Apper tables.
+Apper is a no-code database/app platform for building custom business apps with tables, records, and automations. This package provides two nodes: an **Apper Trigger** node that starts workflows when records are created or updated, and an **Apper** node that lets you create, read, update, delete, and search records in your Apper tables.
 
 [n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
 
@@ -22,7 +22,7 @@ Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes
 
 ### Apper Trigger
 
-The **Apper Trigger** node starts a workflow when [describe the triggering event — e.g. "a new record is created in a table" / "a record is updated" / runs on a schedule via polling]. Configure it by selecting the **App** and **Table** to watch[, and the event type, if applicable].
+The **Apper Trigger** node starts a workflow when a record is created or updated in a table. Configure it by selecting the **App** and **Table** to watch, and the event type you want to trigger on.
 
 ### Record actions (Apper node)
 
@@ -62,7 +62,7 @@ You'll need an Apper API key to use this node.
 
 ## Usage
 
-- Use the **Apper Trigger** node to start a workflow automatically when [triggering event]. Select the App and Table you want to watch[, and configure polling interval/event type as needed].
+- Use the **Apper Trigger** node to start a workflow automatically when a record is created or updated. Select the App and Table you want to watch, and configure the polling interval as needed.
 - Use the **Apper** node's **Record** resource to create, read, update, delete, or search records as a step within a workflow — whether triggered by Apper Trigger or anything else (schedule, webhook, another app).
 - Start by selecting **Record** as the resource, then choose an operation.
 - Use the **App** and **Table** fields' "From List" mode to search and select by name, or switch to "ID" mode to enter a raw App/Table ID directly (useful in expressions or when chaining from a previous node).
