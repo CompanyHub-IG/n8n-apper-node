@@ -77,7 +77,7 @@ export const recordDescription: INodeProperties[] = [
 						url: '=/data/{{$parameter["appId"]}}/tables/{{$parameter["tableName"]}}/records',
 					},
 					output: {
-						postReceive: [checkCreateRecordsResult],
+						postReceive: [checkRecordOperationResult],
 					},
 				},
 			},

@@ -26,9 +26,6 @@ function extractValue(param: unknown): string {
 	return '';
 }
 
-// Shared by Get Record By ID and Search Record — both need the table's
-// field metadata before they can build their actual request body, mirroring
-// the two-call pattern from the Zapier integration.
 async function fetchTableFields(
 	this: IExecuteSingleFunctions,
 	appId: string,
@@ -83,9 +80,6 @@ export async function castRecordFieldTypes(
 	return requestOptions;
 }
 
-// Update: PUT .../records, body { records: [{ Id, ...fields }] }.
-// Apper requires "Id" capitalized. Apper's records endpoints accept it as
-// a string, not an integer.
 export async function castUpdateRecordFieldTypes(
 	this: IExecuteSingleFunctions,
 	requestOptions: IHttpRequestOptions,
@@ -101,7 +95,7 @@ export async function castUpdateRecordFieldTypes(
 
 	return requestOptions;
 }
-// Delete: POST .../records/delete, body { recordIds: [...] }.
+
 export async function buildDeleteRecordBody(
 	this: IExecuteSingleFunctions,
 	requestOptions: IHttpRequestOptions,
@@ -122,8 +116,6 @@ interface UpdateLineItem {
 	columns?: ResourceMapperValue;
 }
 
-// Create Many: one fixedCollection row per record, each using the same
-// "Columns" resourceMapper UI as single Create.
 export async function buildCreateManyBody(
 	this: IExecuteSingleFunctions,
 	requestOptions: IHttpRequestOptions,
@@ -148,8 +140,6 @@ export async function buildCreateManyBody(
 	return requestOptions;
 }
 
-// Update Many: one fixedCollection row per record, each with its own
-// Record ID plus the same "Columns" resourceMapper UI as single Update.
 export async function buildUpdateManyBody(
 	this: IExecuteSingleFunctions,
 	requestOptions: IHttpRequestOptions,
@@ -177,8 +167,6 @@ export async function buildUpdateManyBody(
 	return requestOptions;
 }
 
-// Delete Many: same endpoint/shape as single Delete, just a longer
-// recordIds array built from a comma-separated string field.
 export async function buildDeleteManyBody(
 	this: IExecuteSingleFunctions,
 	requestOptions: IHttpRequestOptions,
@@ -198,10 +186,6 @@ export async function buildDeleteManyBody(
 	return requestOptions;
 }
 
-// Get Record By ID: mirrors the Zapier action exactly — fetch the table's
-// field metadata first, then request the record with an explicit "fields"
-// list (Apper's get-by-id endpoint requires this rather than returning
-// everything by default).
 export async function buildGetRecordBody(
 	this: IExecuteSingleFunctions,
 	requestOptions: IHttpRequestOptions,
@@ -218,9 +202,6 @@ export async function buildGetRecordBody(
 	return requestOptions;
 }
 
-// Search Record: mirrors the Zapier action — fetch field metadata to find
-// the selected search field's real type, cast the search value to match
-// (number/boolean/string), then build the where-clause search body.
 export async function buildSearchRecordBody(
 	this: IExecuteSingleFunctions,
 	requestOptions: IHttpRequestOptions,
@@ -275,19 +256,13 @@ export async function buildSearchRecordBody(
 	requestOptions.body = {
 		fields: fieldNames,
 		where: [{ fieldName: searchField, operator: 'ExactMatch', values: [castValue] }],
-		OrderBy: [{ FieldName: 'Id', SortType: 'Desc' }],
+		OrderBy: [{ FieldName: 'CreatedOn', SortType: 'Desc' }],
 		PagingInfo: { Limit: 100 },
 	};
 
 	return requestOptions;
 }
 
-// Apper's bulk-style endpoints (single Update/Delete) can return HTTP 200
-// even when the individual record operation failed — success/failure lives
-// in results[0].success, with details in results[0].errors. This mirrors
-// the handleResponse/buildResultErrorMessage logic from the Zapier
-// integration so n8n surfaces the same field-level error messages instead
-// of a silently failed record under a "200 OK".
 export async function checkRecordOperationResult(
 	this: IExecuteSingleFunctions,
 	data: INodeExecutionData[],
@@ -320,14 +295,6 @@ export async function checkRecordOperationResult(
 	return [{ json: result }];
 }
 
-// Create / Create Many / Update Many / Delete Many: response has a
-// "results" array with one entry per record, each carrying its own success
-// flag — a batch of 5 can have 4 succeed and 1 fail with a DB-level error
-// like Apper's "lastval is not yet defined in this session". The
-// declarative rootProperty postReceive doesn't inspect success at all, so a
-// failed record would silently come back as normal-looking output. This
-// checks every item and throws if any failed, returning each record's
-// "data" as a separate output item on success.
 export async function checkCreateRecordsResult(
 	this: IExecuteSingleFunctions,
 	data: INodeExecutionData[],
@@ -342,19 +309,32 @@ export async function checkCreateRecordsResult(
 		});
 	}
 
-	const failed = results.filter((r) => r.success === false);
+	return results.map((result) => {
+		const success = result.success !== false;
 
-	if (failed.length > 0) {
-		const message = failed
-			.map((r) => (r.message as string) || 'Failed to create the record.')
-			.join('; ');
-		throw new NodeApiError(this.getNode(), body as JsonObject, { message });
-	}
+		if (success) {
+			return { json: { success: true, ...(result.data as IDataObject) } };
+		}
 
-	return results.map((r) => ({ json: (r.data as IDataObject) ?? r }));
+		const errors = result.errors as
+			| Array<{ message?: string; fieldLabel?: string; fieldName?: string }>
+			| undefined;
+		const errorMessage =
+			(result.message as string) ||
+			(errors && errors.length > 0
+				? errors.map((e) => e.message || `${e.fieldLabel || e.fieldName}: Invalid value`).join('; ')
+				: 'Failed to perform the operation on the record.');
+
+		return {
+			json: {
+				success: false,
+				error: errorMessage,
+				...(result.data as IDataObject),
+			},
+		};
+	});
 }
 
-// Get Record By ID: response is a single object under "data".
 export async function checkGetRecordResult(
 	this: IExecuteSingleFunctions,
 	data: INodeExecutionData[],
@@ -372,8 +352,6 @@ export async function checkGetRecordResult(
 	return [{ json: record }];
 }
 
-// Search Record: response is an array under "data" — return no items
-// rather than an error when nothing matches, matching the Zapier action.
 export async function checkSearchRecordResult(
 	this: IExecuteSingleFunctions,
 	data: INodeExecutionData[],
