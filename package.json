@@ -63,5 +63,12 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*"
+  },
+  "allowScripts": {
+    "cpu-features@0.0.10": true,
+    "eslint-plugin-n8n-nodes-base@1.16.7": true,
+    "isolated-vm@7.0.1": true,
+    "ssh2@1.15.0": true,
+    "unrs-resolver@1.12.2": true
   }
 }
