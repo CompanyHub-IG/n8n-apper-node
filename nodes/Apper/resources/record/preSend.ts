@@ -47,21 +47,28 @@ function castFields(
 	const casted: Record<string, unknown> = {};
 
 	for (const [key, value] of Object.entries(rawValues)) {
-		if ( value === null || value === undefined) {
+		const fieldDef = schema.find((f) => f.id === key);
+
+		if (fieldDef?.apperType === 'People') {
+			if (value === '' || value === null || value === undefined) {
+				casted[key] = [];
+			} else {
+				casted[key] = [{ User: String(value) }];
+			}
 			continue;
 		}
 
-		const fieldDef = schema.find((f) => f.id === key);
+		if (value === null || value === undefined) {
+			continue;
+		}
 
-		if (fieldDef?.apperType === 'People') {   
-			casted[key] = [{ "User": String(value) }];
-		} else if (fieldDef?.type === 'number') {
+		if (fieldDef?.type === 'number') {
 			casted[key] = Number(value);
 		} else if (fieldDef?.type === 'boolean' && typeof value === 'string') {
 			casted[key] = value.toLowerCase() === 'true';
 		} else {
 			casted[key] = value;
-		}   
+		}
 	}
 
 	return casted;
