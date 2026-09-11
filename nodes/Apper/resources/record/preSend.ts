@@ -10,7 +10,12 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 
 interface ResourceMapperValue {
 	value: Record<string, unknown> | null;
-	schema: Array<{ id: string; type?: string; apperType?: string }>;
+	schema: Array<{
+		id: string;
+		type?: string;
+		apperType?: string;
+		options?: Array<{ name: string; value: string }>;
+	}>;
 }
 
 interface ApperFieldMeta {
@@ -40,9 +45,19 @@ async function fetchTableFields(
 	return (response?.data as ApperFieldMeta[] | undefined) ?? [];
 }
 
+// Bound to the execution context (called via .call(this, ...) everywhere)
+// so it can throw a proper NodeOperationError with the real node reference
+// when MultiSelect/MultiPicklist validation fails, instead of an unsafe
+// (this as any) fallback.
 function castFields(
+	this: IExecuteSingleFunctions,
 	rawValues: Record<string, unknown>,
-	schema: Array<{ id: string; type?: string; apperType?: string }>,
+	schema: Array<{
+		id: string;
+		type?: string;
+		apperType?: string;
+		options?: Array<{ name: string; value: string }>;
+	}>,
 ): Record<string, unknown> {
 	const casted: Record<string, unknown> = {};
 
@@ -55,6 +70,37 @@ function castFields(
 			} else {
 				casted[key] = [{ User: String(value) }];
 			}
+			continue;
+		}
+
+		// MultiSelect/MultiPicklist: still a free-text comma-separated
+		// input (n8n's resourceMapper has no multi-select field type), but
+		// validate each entered value against the field's known options
+		// before sending - catches typos/invalid values here with a clear
+		// message, rather than a confusing Apper API error later.
+		if (fieldDef?.apperType === 'MultiSelect' || fieldDef?.apperType === 'MultiPicklist') {
+			if (value === '' || value === null || value === undefined) {
+				continue;
+			}
+
+			const enteredValues = String(value)
+				.split(',')
+				.map((v) => v.trim())
+				.filter((v) => v.length > 0);
+
+			const validValues = (fieldDef.options ?? []).map((o) => o.value);
+
+			if (validValues.length > 0) {
+				const invalid = enteredValues.filter((v) => !validValues.includes(v));
+				if (invalid.length > 0) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Invalid value(s) for field "${key}": ${invalid.join(', ')}. Valid options: ${validValues.join(', ')}`,
+					);
+				}
+			}
+
+			casted[key] = enteredValues.join(',');
 			continue;
 		}
 
@@ -82,7 +128,7 @@ export async function castRecordFieldTypes(
 	const rawValues = columns?.value ?? {};
 	const schema = columns?.schema ?? [];
 
-	requestOptions.body = { records: [castFields(rawValues, schema)] };
+	requestOptions.body = { records: [castFields.call(this, rawValues, schema)] };
 
 	return requestOptions;
 }
@@ -97,7 +143,7 @@ export async function castUpdateRecordFieldTypes(
 	const schema = columns?.schema ?? [];
 
 	requestOptions.body = {
-		records: [{ Id: recordId, ...castFields(rawValues, schema) }],
+		records: [{ Id: recordId, ...castFields.call(this, rawValues, schema) }],
 	};
 
 	return requestOptions;
@@ -112,7 +158,7 @@ export async function buildDeleteRecordBody(
 	requestOptions.body = { recordIds: [recordId] };
 
 	return requestOptions;
-}       
+}
 
 interface RecordLineItem {
 	columns?: ResourceMapperValue;
@@ -139,7 +185,7 @@ export async function buildCreateManyBody(
 	const records = items.map((item) => {
 		const rawValues = item.columns?.value ?? {};
 		const schema = item.columns?.schema ?? [];
-		return castFields(rawValues, schema);
+		return castFields.call(this, rawValues, schema);
 	});
 
 	requestOptions.body = { records };
@@ -166,7 +212,7 @@ export async function buildUpdateManyBody(
 		}
 		const rawValues = item.columns?.value ?? {};
 		const schema = item.columns?.schema ?? [];
-		return { Id: item.recordId, ...castFields(rawValues, schema) };
+		return { Id: item.recordId, ...castFields.call(this, rawValues, schema) };
 	});
 
 	requestOptions.body = { records };
@@ -216,7 +262,7 @@ export async function buildSearchRecordBody(
 	const appId = extractValue(this.getNodeParameter('appId'));
 	const tableName = extractValue(this.getNodeParameter('tableName'));
 	const searchField = this.getNodeParameter('searchField') as string;
-	const rawValue = this.getNodeParameter('searchValue');
+	const rawValue = extractValue(this.getNodeParameter('searchValue'));
 
 	if (!searchField || rawValue === undefined || rawValue === '') {
 		throw new NodeOperationError(
@@ -254,7 +300,7 @@ export async function buildSearchRecordBody(
 			break;
 		case 'Boolean':
 		case 'Bool':
-			castValue = rawValue === true || rawValue === 'true' || rawValue === '1' || rawValue === 1;
+			castValue = rawValue === 'true' || rawValue === '1';
 			break;
 		default:
 			castValue = rawValue;
