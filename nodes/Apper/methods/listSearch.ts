@@ -60,7 +60,6 @@ export async function getTables(
 	return { results };
 }
 
-
 // Powers the "Record ID" resourceLocator dropdown on Get/Update/Delete —
 // searches by "Name" (per Apper's convention seen in the sample record
 // data) so the picker shows a human-readable label instead of a raw Id.
@@ -100,4 +99,112 @@ export async function getRecords(
 			value: record.Id,
 		})),
 	};
+}
+
+interface ApperUser {
+	id: string;
+	name: string;
+}
+
+
+export async function getSearchValueOptions(
+	this: ILoadOptionsFunctions,
+	filter?: string,
+): Promise<INodeListSearchResult> {
+	const appId = extractValue(this.getNodeParameter('appId', 0));
+	const tableName = extractValue(this.getNodeParameter('tableName', 0));
+	const searchField = this.getNodeParameter('searchField', 0) as string;
+
+	if (!appId || !tableName || !searchField) {
+		return { results: [] };
+	}
+
+	const fieldsResponse = await this.helpers.httpRequestWithAuthentication.call(this, 'apperApi', {
+		method: 'GET',
+		url: `https://api.apper.io/v1/meta/${appId}/tables/${tableName}/fields`,
+		json: true,
+	});
+
+	const fields = (fieldsResponse?.data ?? []) as Array<{
+		name: string;
+		type: string;
+		options?: string[] | null;
+		parentTableId?: number;
+	}>;
+
+	const field = fields.find((f) => f.name === searchField);
+	if (!field) {
+		return { results: [] };
+	}
+
+	if (['Picklist', 'Select', 'Dropdown', 'MultiSelect', 'MultiPicklist'].includes(field.type)) {
+		const options = field.options ?? [];
+		const filtered = filter
+			? options.filter((opt) => opt.toLowerCase().includes(filter.toLowerCase()))
+			: options;
+		return { results: filtered.map((opt) => ({ name: opt, value: opt })) };
+	}
+
+	if (field.type === 'People') {
+		const usersResponse = await this.helpers.httpRequestWithAuthentication.call(this, 'apperApi', {
+			method: 'POST',
+			url: `https://api.apper.io/v1/data/${appId}/users`,
+			body: {},
+			json: true,
+		});
+
+		const users = (usersResponse?.data ?? []) as ApperUser[];
+		const filtered = filter
+			? users.filter((u) => (u.name ?? '').toLowerCase().includes(filter.toLowerCase()))
+			: users;
+		return {
+			results: filtered.map((u) => ({ name: (u.name ?? u.id).trim(), value: u.id })),
+		};
+	}
+
+	if (field.type === 'Lookup' && field.parentTableId) {
+		const tablesResponse = await this.helpers.httpRequestWithAuthentication.call(
+			this,
+			'apperApi',
+			{
+				method: 'GET',
+				url: `https://api.apper.io/v1/meta/${appId}/tables`,
+				json: true,
+			},
+		);
+
+		const allTables = (tablesResponse?.data ?? []) as Array<{ id: number; name: string }>;
+		const targetTable = allTables.find((t) => t.id === field.parentTableId);
+		if (!targetTable) {
+			return { results: [] };
+		}
+
+		const recordsResponse = await this.helpers.httpRequestWithAuthentication.call(
+			this,
+			'apperApi',
+			{
+				method: 'POST',
+				url: `https://api.apper.io/v1/data/${appId}/tables/${targetTable.name}`,
+				body: {
+					fields: ['Id', 'Name'],
+					OrderBy: [{ FieldName: 'Id', SortType: 'Desc' }],
+					PagingInfo: { Limit: 100 },
+				},
+				json: true,
+			},
+		);
+
+		const records = (recordsResponse?.data ?? []) as Array<{ Id: string; Name?: string }>;
+		const filtered = filter
+			? records.filter((r) => (r.Name ?? '').toLowerCase().includes(filter.toLowerCase()))
+			: records;
+
+		return {
+			results: filtered.map((r) => ({ name: r.Name || r.Id, value: r.Id })),
+		};
+	}
+
+	// Number, Text, Boolean, Date, etc. - no dropdown applies; the user
+	// should use the "ID"/free-text mode of this field instead.
+	return { results: [] };
 }

@@ -313,16 +313,37 @@ export const recordDescription: INodeProperties[] = [
 		description:
 			'Field to search by (exact match). Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 	},
-	{
+		{
 		displayName: 'Value',
 		name: 'searchValue',
-		type: 'string',
-		default: '',
+		type: 'resourceLocator',
+		default: { mode: 'id', value: '' },
 		required: true,
 		displayOptions: {
 			show: showOnlyForRecordSearch,
 		},
-		description: 'Value to match against the search field',
+		description:
+			'Value to match against the search field. Use "From List" for Picklist/Select or People fields, or "ID" to type a value directly (for Number, Text, Boolean, or Date fields).',
+		typeOptions: {
+			loadOptionsDependsOn: ['searchField'],
+		},
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: {
+					searchListMethod: 'getSearchValueOptions',
+					searchable: true,
+				},
+			},
+			{
+				displayName: 'ID',
+				name: 'id',
+				type: 'string',
+				placeholder: 'Enter a value directly',
+			},
+		],
 	},
 	{
 		displayName: 'Columns',

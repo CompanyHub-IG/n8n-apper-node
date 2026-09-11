@@ -1,6 +1,6 @@
 import { NodeConnectionTypes, type INodeType, type INodeTypeDescription } from 'n8n-workflow';
 import { recordDescription } from './resources/record';
-import { getApps, getTables, getRecords } from './methods/listSearch';
+import { getApps, getTables, getRecords, getSearchValueOptions} from './methods/listSearch';
 import { getTableFields } from './methods/resourceMapping';
 import { getSearchableFields } from './methods/loadOptions';
 
@@ -49,7 +49,8 @@ export class Apper implements INodeType {
 		listSearch: {
 			getApps,
 			getTables,
-			getRecords
+			getRecords,
+			getSearchValueOptions
 		},
 		resourceMapping: {
 			getTableFields,
