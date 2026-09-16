@@ -129,7 +129,7 @@ export async function getSearchValueOptions(
 		name: string;
 		type: string;
 		options?: string[] | null;
-		parentTableId?: number;
+		foreignKeyTableName?: string | null;
 	}>;
 
 	const field = fields.find((f) => f.name === searchField);
@@ -162,29 +162,13 @@ export async function getSearchValueOptions(
 		};
 	}
 
-	if (field.type === 'Lookup' && field.parentTableId) {
-		const tablesResponse = await this.helpers.httpRequestWithAuthentication.call(
-			this,
-			'apperApi',
-			{
-				method: 'GET',
-				url: `https://api.apper.io/v1/meta/${appId}/tables`,
-				json: true,
-			},
-		);
-
-		const allTables = (tablesResponse?.data ?? []) as Array<{ id: number; name: string }>;
-		const targetTable = allTables.find((t) => t.id === field.parentTableId);
-		if (!targetTable) {
-			return { results: [] };
-		}
-
+	if (field.type === 'Lookup' && field.foreignKeyTableName) {
 		const recordsResponse = await this.helpers.httpRequestWithAuthentication.call(
 			this,
 			'apperApi',
 			{
 				method: 'POST',
-				url: `https://api.apper.io/v1/data/${appId}/tables/${targetTable.name}`,
+				url: `https://api.apper.io/v1/data/${appId}/tables/${field.foreignKeyTableName}`,
 				body: {
 					fields: ['Id', 'Name'],
 					OrderBy: [{ FieldName: 'Id', SortType: 'Desc' }],

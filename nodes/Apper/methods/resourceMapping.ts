@@ -52,30 +52,14 @@ async function fetchAppUsers(this: ILoadOptionsFunctions, appId: string): Promis
 	return users.map((u) => ({ id: u.id, name: (u.name ?? u.id).trim() }));
 }
 
-interface ApperTableMeta {
-	id: number;
-	name: string;
-	label: string;
-}
-
-async function fetchAppTables(this: ILoadOptionsFunctions, appId: string): Promise<ApperTableMeta[]> {
-	const response = await this.helpers.httpRequestWithAuthentication.call(this, 'apperApi', {
-		method: 'GET',
-		url: `https://api.apper.io/v1/meta/${appId}/tables`,
-		json: true,
-	});
-
-	return (response?.data as ApperTableMeta[] | undefined) ?? [];
-}
-
 interface ApperLookupRecord {
 	Id: string;
 	Name?: string;
 }
 
-// Lookup fields reference another table via parentTableId. Resolve that id
-// to the target table's name, then list a page of its records so the user
-// can pick one by name rather than typing a raw record Id.
+// Lookup fields carry their target table's name directly as
+// foreignKeyTableName, so records can be fetched without a separate
+// tables lookup.
 async function fetchLookupRecords(
 	this: ILoadOptionsFunctions,
 	appId: string,
@@ -117,27 +101,28 @@ export async function getTableFields(this: ILoadOptionsFunctions): Promise<Resou
 		type: string;
 		isRequired: boolean;
 		options?: string[] | null;
-		parentTableId?: number;
+		foreignKeyTableName?: string | null;
 	}>;
 
 	const hasPeopleField = apperFields.some((f) => f.type === 'People');
-	const lookupFields = apperFields.filter((f) => f.type === 'Lookup' && f.parentTableId);
+	const lookupFields = apperFields.filter((f) => f.type === 'Lookup' && f.foreignKeyTableName);
 
-	const [users, allTables] = await Promise.all([
-		hasPeopleField ? fetchAppUsers.call(this, appId) : Promise.resolve<ApperUser[]>([]),
-		lookupFields.length > 0 ? fetchAppTables.call(this, appId) : Promise.resolve<ApperTableMeta[]>([]),
-	]);
+	const users = hasPeopleField ? await fetchAppUsers.call(this, appId) : [];
 
-	// For each distinct target table referenced by a Lookup field, resolve
-	// its name and fetch its records once - avoids refetching the same
-	// target table's records if multiple Lookup fields point to it.
+	// Fetch each distinct target table's records once - avoids refetching
+	// the same target table's records if multiple Lookup fields point to it.
+	const recordsByTargetTable = new Map<string, ApperLookupRecord[]>();
 	const lookupOptionsByFieldName = new Map<string, Array<{ name: string; value: string }>>();
 
 	for (const field of lookupFields) {
-		const targetTable = allTables.find((t) => t.id === field.parentTableId);
-		if (!targetTable) continue;
+		const targetTable = field.foreignKeyTableName as string;
 
-		const records = await fetchLookupRecords.call(this, appId, targetTable.name);
+		let records = recordsByTargetTable.get(targetTable);
+		if (!records) {
+			records = await fetchLookupRecords.call(this, appId, targetTable);
+			recordsByTargetTable.set(targetTable, records);
+		}
+
 		lookupOptionsByFieldName.set(
 			field.name,
 			records.map((r) => ({ name: r.Name || r.Id, value: r.Id })),
