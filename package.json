@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-apper",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "release-it": {
     "git": {
       "requireBranch": "main"
