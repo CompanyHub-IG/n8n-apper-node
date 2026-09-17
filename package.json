@@ -1,16 +1,16 @@
 {
   "name": "n8n-nodes-apper",
-  "version": "0.1.7",
+  "version": "0.1.9",
   "release-it": {
     "git": {
-      "requireBranch": "master"
+      "requireBranch": "main"
     }
   },
   "description": "Apper is an AI app builder that turns your prompts into fully functional apps in minutes—with built-in billing, auth, and database. That means you can charge customers and manage users from day one, no code needed.",
   "main": "dist/index.js",
   "author": {
     "name": "CompanyHub-IG",
-    "email": "support@companyhub.ig"
+    "email": "abhishek@apper.io"
   },
   "homepage": "https://apper.io",
   "files": [
