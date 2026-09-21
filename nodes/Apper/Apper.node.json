@@ -1,8 +1,8 @@
 {
-	"node": "n8n-nodes-apper",
+	"node": "n8n-nodes-apper.apper",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
-	"categories": ["Development", "Developer Tools"],
+	"categories": ["Development"],
 	"resources": {
 		"credentialDocumentation": [
 			{
